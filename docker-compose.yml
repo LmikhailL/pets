@@ -16,6 +16,12 @@ services:
       - "8081:8081"
     volumes:
       - nexus-data:/nexus-data
+    # Nexus reserves ~2.7 GB by default, too much next to Jenkins in 4 GB Docker
+    environment:
+      JAVA_MIN_MEM: 512m
+      JAVA_MAX_MEM: 1g
+      DIRECT_MAX_MEM: 512m
+    restart: unless-stopped
 
 volumes:
   jenkins_home:
