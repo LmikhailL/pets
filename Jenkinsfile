@@ -7,9 +7,15 @@ pipeline {
 	}
 
 	stages {
-		stage("compile") {
+		stage("Compile") {
 			steps {
-				echo "compile"
+				sh 'mvn -B -ntp -q compile'
+			}
+		}
+
+		stage("Spotless") {
+			steps {
+				sh 'mvn -B -ntp -q spotless:check'
 			}
 		}
 
@@ -21,13 +27,19 @@ pipeline {
 			}
 		}
 
-		stage("run unit tests") {
+		stage("Unit Tests") {
 			steps {
-				echo "tests"
+				sh 'mvn -B -ntp -q test'
 			}
 		}
 
-		stage("deploy to dev env") {
+		stage("Integration Tests") {
+			steps {
+				sh 'mvn -B -ntp -q verify -DskipUTs=true'
+			}
+		}
+
+		stage("Deploy") {
 			steps {
 				echo "deploy"
 			}
