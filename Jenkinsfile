@@ -16,7 +16,7 @@ pipeline {
 		stage('SonarQube Cloud') {
 			steps {
 				withSonarQubeEnv('SonarCloud') {
-					sh 'mvn sonar:sonar'
+					sh 'mvn -B -ntp sonar:sonar'
 				}
 			}
 		}
