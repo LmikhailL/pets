@@ -60,14 +60,14 @@ pipeline {
 						usernameVariable: 'SSH_USER'
 					)
 				]) {
-					// 1. Stop the running app
-					sh 'ssh $SSH_OPTS -i $SSH_KEY -p $DEPLOY_PORT $SSH_USER@$DEPLOY_HOST "sudo systemctl stop pets"'
+					// 1. Stop the running app ("|| true" so it doesn't fail when nothing is running yet)
+					sh 'ssh $SSH_OPTS -i $SSH_KEY -p $DEPLOY_PORT $SSH_USER@$DEPLOY_HOST "pkill java || true"'
 
 					// 2. Upload the new jar ("-b -" makes sftp fail the build if the upload fails)
-					sh 'echo "put target/app.jar /opt/pets/app.jar" | sftp $SSH_OPTS -i $SSH_KEY -P $DEPLOY_PORT -b - $SSH_USER@$DEPLOY_HOST'
+					sh 'echo "put target/app.jar app.jar" | sftp $SSH_OPTS -i $SSH_KEY -P $DEPLOY_PORT -b - $SSH_USER@$DEPLOY_HOST'
 
-					// 3. Start the app again
-					sh 'ssh $SSH_OPTS -i $SSH_KEY -p $DEPLOY_PORT $SSH_USER@$DEPLOY_HOST "sudo systemctl start pets"'
+					// 3. Start the app in the background, logs go to app.log
+					sh 'ssh $SSH_OPTS -i $SSH_KEY -p $DEPLOY_PORT $SSH_USER@$DEPLOY_HOST "nohup java -jar app.jar > app.log 2>&1 &"'
 				}
 			}
 		}
