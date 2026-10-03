@@ -6,10 +6,6 @@ pipeline {
 		jdk 'jdk25'
 	}
 
-	options {
-		copyArtifactPermission('PetsPromote')
-	}
-
 	stages {
 		stage("Compile") {
 			steps {
@@ -47,6 +43,22 @@ pipeline {
 			steps {
 				sh 'mvn -B -ntp -q package -DskipUTs=true -DskipITs=true'
 				archiveArtifacts artifacts: 'target/app-*.jar', fingerprint: true
+			}
+		}
+
+		stage("Upload to Nexus") {
+			steps {
+				withCredentials([
+					usernamePassword(
+						credentialsId: 'nexus',
+						usernameVariable: 'NEXUS_USER',
+						passwordVariable: 'NEXUS_PASS'
+					)
+				]) {
+					// URL ends with "/", so curl adds the file name: .../pets/app-<commit>.jar
+					// "-f" makes curl fail the build if Nexus returns an error
+					sh 'curl -f -u $NEXUS_USER:$NEXUS_PASS --upload-file target/app-*.jar http://nexus:8081/repository/pets/'
+				}
 			}
 		}
 
