@@ -9,21 +9,13 @@ pipeline {
 	stages {
 		stage("Compile") {
 			steps {
-				sh 'mvn -B -ntp -q compile'
+				sh 'mvn -B -ntp -q clean compile'
 			}
 		}
 
 		stage("Spotless") {
 			steps {
 				sh 'mvn -B -ntp -q spotless:check'
-			}
-		}
-
-		stage('SonarCloud') {
-			steps {
-				withSonarQubeEnv('SonarCloud') {
-					sh 'mvn -B -ntp -q sonar:sonar'
-				}
 			}
 		}
 
@@ -36,6 +28,14 @@ pipeline {
 		stage("Integration Tests") {
 			steps {
 				sh 'mvn -B -ntp -q verify -DskipUTs=true'
+			}
+		}
+
+		stage('SonarCloud') {
+			steps {
+				withSonarQubeEnv('SonarCloud') {
+					sh 'mvn -B -ntp -q sonar:sonar'
+				}
 			}
 		}
 
