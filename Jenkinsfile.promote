@@ -1,5 +1,6 @@
-// Deploys the app jar from an existing PetsPipeline build to the chosen environment.
+// Deploys a jar from Nexus to the chosen environment.
 // Start it from Jenkins: PetsPromote -> Build with Parameters.
+// Available jars: http://localhost:8081 -> Browse -> pets
 
 // SSH credential and port of each Vagrant box (see: vagrant ssh-config <box>)
 def SERVERS = [
@@ -12,25 +13,27 @@ pipeline {
 	agent any
 
 	parameters {
-		string(name: 'SOURCE_BRANCH', defaultValue: 'main', description: 'Branch or PR in PetsPipeline that built the jar, e.g. main or PR-5')
-		string(name: 'SOURCE_BUILD', description: 'Build number of that branch, e.g. 12')
+		string(name: 'ARTIFACT', description: 'Jar name in Nexus, e.g. app-1b021cf.jar')
 		choice(name: 'ENV', choices: ['test', 'uat', 'dev'], description: 'Where to deploy')
 	}
 
 	stages {
-		stage("Get artifact") {
+		stage("Download from Nexus") {
 			steps {
-				// Shown in the build history, e.g. "PR-5 #12 -> uat"
+				// Shown in the build history, e.g. "app-1b021cf.jar -> uat"
 				script {
-					currentBuild.description = "${params.SOURCE_BRANCH} #${params.SOURCE_BUILD} -> ${params.ENV}"
+					currentBuild.description = "${params.ARTIFACT} -> ${params.ENV}"
 				}
-				// Remove jars left from previous promotions
-				deleteDir()
-				copyArtifacts(
-					projectName: "PetsPipeline/${params.SOURCE_BRANCH}",
-					selector: specific(params.SOURCE_BUILD),
-					filter: 'target/app-*.jar'
-				)
+				withCredentials([
+					usernamePassword(
+						credentialsId: 'nexus',
+						usernameVariable: 'NEXUS_USER',
+						passwordVariable: 'NEXUS_PASS'
+					)
+				]) {
+					// "-f" makes curl fail the build if the jar doesn't exist in Nexus
+					sh 'curl -f -u $NEXUS_USER:$NEXUS_PASS -o app.jar http://nexus:8081/repository/pets/$ARTIFACT'
+				}
 			}
 		}
 
@@ -52,7 +55,7 @@ pipeline {
 					sh 'ssh $SSH_OPTS -i $SSH_KEY -p $DEPLOY_PORT $SSH_USER@$DEPLOY_HOST "pkill java || true"'
 
 					// 2. Upload the jar ("-b -" makes sftp fail the build if the upload fails)
-					sh 'echo "put target/app-*.jar app.jar" | sftp $SSH_OPTS -i $SSH_KEY -P $DEPLOY_PORT -b - $SSH_USER@$DEPLOY_HOST'
+					sh 'echo "put app.jar app.jar" | sftp $SSH_OPTS -i $SSH_KEY -P $DEPLOY_PORT -b - $SSH_USER@$DEPLOY_HOST'
 
 					// 3. Start the app in the background, logs go to app.log
 					sh 'ssh $SSH_OPTS -i $SSH_KEY -p $DEPLOY_PORT $SSH_USER@$DEPLOY_HOST "nohup java -jar app.jar > app.log 2>&1 &"'
