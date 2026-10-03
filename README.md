@@ -80,3 +80,5 @@ Deployment stops the running app, uploads the jar as `app.jar` and starts it in 
 - Tools: Maven `mvn3.9`, JDK `jdk25`
 - Credentials: `nexus` (username/password), `vagrant-dev`, `vagrant-test`, `vagrant-uat` (SSH private keys)
 - SonarQube server named `SonarCloud`
+
+tst
