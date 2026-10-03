@@ -13,6 +13,7 @@ public class PetController {
     private static final List<Pet> PETS = List.of(
             new Pet("kiki", "cat"),
             new Pet("rex", "dog"),
+            new Pet("rico", "penguin"),
             new Pet("tweety", "bird")
     );
 
