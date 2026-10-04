@@ -16,6 +16,7 @@ public class PetController {
           new Pet("rico", "penguin"),
           new Pet("pepe", "frog"),
           new Pet("dodo", "snake"),
+          new Pet("jojo", "bear"),
           new Pet("tweety", "bird"));
 
   @GetMapping
