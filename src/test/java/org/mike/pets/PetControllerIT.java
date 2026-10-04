@@ -23,8 +23,8 @@ class PetControllerIT {
         .isOk()
         .expectBody()
         .jsonPath("$.length()")
-        .isEqualTo(6)
-        .jsonPath("$[5].petName")
+        .isEqualTo(7)
+        .jsonPath("$[6].petName")
         .isEqualTo("tweety");
   }
 }
