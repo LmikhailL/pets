@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Vagrant (contains SSH private keys of the boxes) ###
+.vagrant/

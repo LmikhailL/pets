@@ -52,6 +52,25 @@ docker compose up -d
 - Jenkins: http://localhost:8080
 - Nexus: http://localhost:8081 (raw repository `pets`)
 
+### GitHub webhook via ngrok
+
+Jenkins runs locally, so GitHub cannot reach it directly. [ngrok](https://ngrok.com) exposes the local Jenkins
+under a public HTTPS URL, which GitHub uses to notify Jenkins about pushes and pull requests:
+
+```bash
+ngrok http 8080           # prints a public URL, e.g. https://<random>.ngrok-free.app
+```
+
+In GitHub: repository **Settings → Webhooks → Add webhook**:
+
+- Payload URL: `https://<your-ngrok-url>/github-webhook/` (the trailing `/` is required)
+- Content type: `application/json`
+- Events: **Pushes** and **Pull requests**
+
+ngrok must keep running while you want builds to start automatically. The free URL changes every time ngrok
+restarts (unless you use your free static domain: `ngrok http --url=<your-domain> 8080`), so update the webhook's
+Payload URL after a restart. **Recent Deliveries** on the webhook page shows whether GitHub reached Jenkins.
+
 ### `Jenkinsfile` — build pipeline
 
 Compile → Spotless → Unit Tests → Integration Tests → SonarCloud → Build → Upload to Nexus → Deploy to dev.
@@ -65,7 +84,26 @@ Deploys an existing jar from Nexus to another environment. Run it in Jenkins wit
 
 ### Environments
 
-Each environment is a Vagrant box reached from Jenkins over SSH via `host.docker.internal`:
+Each environment is a Vagrant box (VirtualBox, Ubuntu 24.04) defined in the `Vagrantfile`.
+On first start every box gets the Java 25 runtime installed, so it can run the jar.
+
+| Env  | IP              | App URL                         |
+|------|-----------------|---------------------------------|
+| dev  | `192.168.56.11` | http://192.168.56.11:8080/pets  |
+| test | `192.168.56.12` | http://192.168.56.12:8080/pets  |
+| uat  | `192.168.56.13` | http://192.168.56.13:8080/pets  |
+
+```bash
+vagrant up                # create and start all boxes (or: vagrant up dev)
+vagrant ssh dev           # log into a box
+vagrant ssh dev -c 'tail -f app.log'   # follow app logs
+vagrant ssh-config dev    # show the box's SSH port and private key
+vagrant halt              # stop all boxes
+vagrant destroy -f uat    # delete a box (recreate with: vagrant up uat)
+```
+
+Jenkins runs in Docker and cannot reach the `192.168.56.x` network, so it connects to the boxes over SSH
+through the ports Vagrant forwards on the host (`host.docker.internal:<port>`):
 
 | Env  | Jenkins SSH credential | SSH port |
 |------|------------------------|----------|
@@ -73,12 +111,17 @@ Each environment is a Vagrant box reached from Jenkins over SSH via `host.docker
 | test | `vagrant-test`         | 2249     |
 | uat  | `vagrant-uat`          | 2248     |
 
+The ports are picked by Vagrant and can change after `vagrant up` / `vagrant reload`.
+Check them with `vagrant ssh-config <env>` and update `Jenkinsfile` / `Jenkinsfile.promote` if they differ.
+
+Each credential is "SSH Username with private key" with username `vagrant` and the key from
+`.vagrant/machines/<env>/virtualbox/private_key`. Recreating a box generates a new key, so update the credential too.
+
 Deployment stops the running app, uploads the jar as `app.jar` and starts it in the background (logs in `app.log`).
+The app is not restarted automatically when a box reboots, so run the deployment again.
 
 ### Required Jenkins setup
 
 - Tools: Maven `mvn3.9`, JDK `jdk25`
 - Credentials: `nexus` (username/password), `vagrant-dev`, `vagrant-test`, `vagrant-uat` (SSH private keys)
 - SonarQube server named `SonarCloud`
-
-tst
